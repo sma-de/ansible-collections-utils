@@ -6,8 +6,8 @@
       smabot_hashivault_readwrite_secrets_args: >-
         {{ _iter_secret_stores
          | smabot.utils.auto_creds_to_hashivault_cfg(write=True) }}
-     no_log: >-
-      {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+    no_log: >-
+     {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
 
 
   - ansible.builtin.include_role:
