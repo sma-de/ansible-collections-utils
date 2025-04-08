@@ -1,0 +1,20 @@
+---
+
+  - set_fact:
+      _tmp_save_orig_new_secret: "{{ _tmp_new_secret_val }}"
+    no_log: >-
+      {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+
+  - set_fact:
+      _tmp_cred_collect_map: _tmp_credential_reversable_cfg
+      _tmp_new_secret_val: "{{ _tmp_old_secret }}"
+    no_log: >-
+      {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+
+  - include_tasks: ../../collect_secrets/hashivault/main.yml
+
+  - set_fact:
+      _tmp_new_secret_val: "{{ _tmp_save_orig_new_secret }}"
+    no_log: >-
+      {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+

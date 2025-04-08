@@ -1,0 +1,101 @@
+---
+
+##
+## smabot_utils_credentials_autogen_cycle_args:
+##   passwords:
+##     pw_defaults: ## lower prio default settings applied to all single pw entries
+##     passwords:
+##       <pw-id>:
+##         ## user: defaulted to mapkey (optional)
+##         ## value: optional hardcoded value
+##
+##         ## settings for creating, loading and saving the secret
+##         credential:
+##           auto_create:
+##             cycle: true/false
+##             config:
+##               ## passthrough gen opts like length and so
+##
+##           stores:
+##             ## backend saving store configs
+##
+##   TODO
+##   tokens:
+##     sshkey_pairs:
+##
+##   TODO
+##   sshkey_pairs:
+##     sshkey_pairs:
+##
+##   TODO
+##   custom:
+##     custom:
+##
+
+
+   ## this role supports vars.d
+  - include_role:
+      name: smabot.base.expand_vardirs
+
+
+  - smabot.utils.normalize_credentials_autogen_cycle_args:
+    register: _tmp_creds_autogen_cycle
+    no_log: >-
+      {{ (smabot_utils_credentials_autogen_cycle_args.hide_secrets
+       | default(True) ) != False }}
+
+  - set_fact:
+      _tmp_credential_secrets_map: {}
+      _tmp_credential_reversable_cfg: {}
+      smabot_utils_credentials_autogen_cycle_args_normed: >-
+        {{ _tmp_creds_autogen_cycle.normalized }}
+    no_log: "{{ _tmp_creds_autogen_cycle.normalized.hide_secrets }}"
+
+
+  - include_tasks: handle_passwords/main.yml
+    loop: >-
+      {{ smabot_utils_credentials_autogen_cycle_args_normed.passwords.passwords
+       | dict2items }}
+    loop_control:
+      loop_var: _iter_passwords
+      label: "{{ _iter_passwords.key }}"
+
+
+##  - ansible.builtin.debug:
+##      var: _tmp_credential_secrets_map
+##  - ansible.builtin.debug:
+##      var: _tmp_credential_reversable_cfg
+
+
+  - set_fact:
+      smabot_utils_credentials_autogen_cycle_return_reversable_cfg: >-
+        {{ _tmp_credential_reversable_cfg }}
+    when: _tmp_credential_reversable_cfg is truthy
+    no_log: >-
+      {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+
+
+    ## when necessary, write back user secrets to secret stores
+  - include_tasks: secret_stores/handle_storing/main.yml
+    loop: >-
+      {{ _tmp_credential_secrets_map | dict2items()
+       | map(attribute='value') }}
+    loop_control:
+      loop_var: _iter_secret_stores
+
+      ##
+      ## note: important to use label here, because on default
+      ##   the complete map is printed to log with all its
+      ##   secrets inside!!
+      ##
+      ## see also: https://serverfault.com/q/1059530
+      ##
+      label: "{{ _iter_secret_stores.name }}"
+
+
+    ## unset tmp vars with credentials to decrease leaking risks
+  - name: clear internal tmp variables
+    set_fact:
+      _tmp_credential_secrets_map:
+      _tmp_credential_reversable_cfg:
+

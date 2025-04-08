@@ -1,0 +1,57 @@
+---
+
+  - set_fact:
+      _tmp_secrets_to_read: >-
+        {{ { _tmp_secret_id: {
+               _iter_secret_stores.parameters.key_names.password: None,
+           }, }
+        }}
+    when: _tmp_secret_type == 'password'
+
+
+  - set_fact:
+      _tmp_secrets_to_read: >-
+        {{ { _tmp_secret_id: {
+               _iter_secret_stores.parameters.key_names.sshkey_private: None,
+               _iter_secret_stores.parameters.key_names.sshkey_public: None,
+           }, }
+        }}
+    when: _tmp_secret_type == 'sshkey_pair'
+
+
+  - name: >-
+      prepare reading secrets from hashivault secret store
+    set_fact:
+      smabot_hashivault_readwrite_secrets_args: >-
+        {{ _iter_secret_stores
+         | smabot.utils.auto_creds_to_hashivault_cfg(
+             secrets=_tmp_secrets_to_read
+         ) }}
+
+
+  - ansible.builtin.include_role:
+      name: smabot.hashivault.readwrite_secrets
+
+
+  - set_fact:
+      "{{ _tmp_secret_setvar }}": >-
+        {{ smabot_hashivault_read_secrets[_tmp_secret_id][
+             _iter_secret_stores.parameters.key_names.password
+           ] | default(None) }}
+    when: _tmp_secret_type == 'password'
+    no_log: true
+
+
+  - set_fact:
+      "{{ _tmp_secret_setvar }}":
+        pubkey: >-
+          {{ smabot_hashivault_read_secrets[_tmp_secret_id][
+             _iter_secret_stores.parameters.key_names.sshkey_public
+           ] | default(None) }}
+        privkey: >-
+          {{ smabot_hashivault_read_secrets[_tmp_secret_id][
+             _iter_secret_stores.parameters.key_names.sshkey_private
+           ] | default(None) }}
+    when: _tmp_secret_type == 'sshkey_pair'
+    no_log: true
+

@@ -1,0 +1,32 @@
+---
+
+##
+## TODO: (soft) deleting / removing latest secrets would obviously be
+##   the better way to handle this than rewriting the old secret
+##   here, but currently this is blocked by open upstream issues
+##   where reading secrets fail when latest version is deleted
+##   (or destroyed):
+##
+##      https://github.com/ansible-collections/community.hashi_vault/issues/312
+##
+
+##  - name: >-
+##      prepare removing secrets from hashivault secret store
+##    set_fact:
+##      smabot_hashivault_readwrite_secrets_args: >-
+##        {{ _iter_secret_stores
+##         | smabot.utils.auto_creds_to_hashivault_cfg(delete=True) }}
+##    ##no_log: true
+
+  - name: >-
+      prepare removing secrets from hashivault secret store
+    set_fact:
+      smabot_hashivault_readwrite_secrets_args: >-
+        {{ _iter_secret_stores
+         | smabot.utils.auto_creds_to_hashivault_cfg(write=True) }}
+    no_log: true
+
+
+  - ansible.builtin.include_role:
+      name: smabot.hashivault.readwrite_secrets
+

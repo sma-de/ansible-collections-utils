@@ -1,0 +1,80 @@
+---
+
+  - set_fact:
+      _tmp_secrets_map: >-
+        {{ {
+           _iter_secret_stores.parameters.key_names.password:
+              _tmp_new_secret_val,
+        } }}
+    when: _tmp_secret_type == 'password'
+    no_log: >-
+      {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+
+
+  - set_fact:
+      _tmp_secrets_map: >-
+        {{ {
+           _iter_secret_stores.parameters.key_names.token:
+              _tmp_new_secret_val,
+        } }}
+    when: _tmp_secret_type == 'token'
+    no_log: >-
+      {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+
+
+  - set_fact:
+      _tmp_secrets_map: >-
+        {{ {
+          _iter_secret_stores.parameters.key_names.sshkey_public:
+             _tmp_new_secret_val.pubkey,
+          _iter_secret_stores.parameters.key_names.sshkey_private:
+             _tmp_new_secret_val.privkey,
+        } }}
+    when: _tmp_secret_type == 'sshkey_pair'
+    no_log: >-
+      {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+
+
+    ##
+    ## optionally when defined add custom extra values to secret to create
+    ##
+  - set_fact:
+      _tmp_secrets_map: >-
+        {{ _tmp_secrets_map
+         | combine(_iter_secret_stores.parameters.extra_values) }}
+    when: >-
+      (_iter_secret_stores.parameters.extra_values | default(False)) is truthy
+    no_log: >-
+      {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+
+
+    ##
+    ## optionally add username to secrets map when requested
+    ##
+  - set_fact:
+      _tmp_secrets_map: >-
+        {{ _tmp_secrets_map
+         | combine({
+            (_iter_secret_stores.parameters.key_names.user | default('user', True)):
+               _tmp_secret_user,
+         }) }}
+    when: >-
+      (_iter_secret_stores.parameters.user_as_secret | default(False)) is truthy
+    no_log: >-
+      {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+
+
+  - set_fact:
+      "{{ _tmp_cred_collect_map }}": >-
+        {{ lookup('ansible.builtin.vars', _tmp_cred_collect_map) | combine({
+               _iter_secret_stores.name: _iter_secret_stores,
+             }, recursive=True) | combine({
+               _iter_secret_stores.name: {
+                 'secrets': {
+                   _tmp_secret_id: _tmp_secrets_map,
+                 },
+               },
+           }, recursive=True) }}
+    no_log: >-
+      {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+

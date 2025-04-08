@@ -1,0 +1,108 @@
+---
+
+  - set_fact:
+      _tmp_new_secret_val:
+      _tmp_old_secret:
+      _tmp_secret_type: password
+      _tmp_secret_id: "{{ _iter_passwords.value.id }}"
+      _tmp_secret_user: "{{ _iter_passwords.value.user }}"
+
+
+  - block:
+      ## no "hardcoded" password given by caller, pw generation mode
+
+        ## optionally load current password from default backend store
+      - block:
+
+          - set_fact:
+              _tmp_secret_setvar: _tmp_new_secret_val
+
+          - include_tasks: ../secret_stores/read_secrets/main.yml
+            loop: >-
+              {{ [_iter_passwords.value.credential._default_store] }}
+            loop_control:
+              loop_var: _iter_secret_stores
+
+          - set_fact:
+              _tmp_old_secret: "{{ _tmp_new_secret_val }}"
+            no_log: >-
+              {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+
+        when: >-
+          not _iter_passwords.value.credential.auto_create.cycle
+          or _iter_passwords.value.reversable
+
+
+      ## optionally auto generate password (either
+      ## when new or cycling is enabled)
+      - name: create new password
+        set_fact:
+          _tmp_new_secret_val: >-
+            {{ lookup('ansible.builtin.password', '/dev/null',
+                 **_iter_passwords.value.credential.auto_create.config) }}
+        when: _iter_passwords.value.credential.auto_create.cycle
+        no_log: >-
+          {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+
+
+      - set_fact:
+          _tmp_secret_update: >-
+            {{ _tmp_old_secret is truthy
+               and _tmp_new_secret_val != _tmp_old_secret }}
+
+
+      - block:
+
+##          - set_fact:
+##              _tmp_cred_type: password
+##              _tmp_secrets_map:
+##                 password: "{{ _tmp_old_secret }}"
+##            ##no_log: "{{ _tmp_creds_autogen_cycle.normalized.hide_secrets }}"
+
+
+          - name: create reversable configs for this credential
+            include_tasks: ../secret_stores/create_reversable_cfg/main.yml
+            loop: >-
+              {{ _iter_passwords.value.credential.stores
+               | dict2items | map(attribute='value') }}
+            loop_control:
+              loop_var: _iter_secret_stores
+            when: _iter_secret_stores.reversable
+
+
+##            ## clear temporary confidential var
+##          - set_fact:
+##              _tmp_secrets_map:
+
+        when: >-
+          _iter_passwords.value.reversable and _tmp_secret_update
+
+    when: (_iter_passwords.value.credential.value | default(False)) is falsy
+
+
+    ## pre-generated pw given by caller, no pw auto generation
+  - set_fact:
+      _tmp_new_secret_val: "{{ _iter_passwords.value.credential.value }}"
+    when: (_iter_passwords.value.credential.value | default(False)) is truthy
+    no_log: >-
+      {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
+
+
+  - set_fact:
+      _tmp_cred_collect_map: _tmp_credential_secrets_map
+
+  ## optionally prepare new secret for backend storing
+  ## collect new user secret so we can later push it to defined secret stores
+  - include_tasks: ../secret_stores/collect_secrets/main.yml
+    loop: >-
+      {{ _iter_passwords.value.credential.stores
+       | dict2items | map(attribute='value') }}
+    loop_control:
+      loop_var: _iter_secret_stores
+
+
+  - name: clear internal confidential variables
+    set_fact:
+      _tmp_new_secret_val:
+      _tmp_old_secret:
+

@@ -1,0 +1,20 @@
+---
+
+##
+## special role which reacts to the special variable
+## "smabot_utils_credentials_autogen_cycle_return_reversable_cfg" which
+## must have been generated and filled by a previous call of role
+## "credentials_autogen_cycle" and reverts any credential changes
+## done to its previous value, this gives somewhat of a transactional
+## revert-back safety when credential cycling did not go through
+## cleanly somewhere on the road
+##
+
+  - include_tasks: secret_stores/handle_storing/main.yml
+    loop: >-
+      {{ smabot_utils_credentials_autogen_cycle_return_reversable_cfg
+       | dict2items() | map(attribute='value') }}
+    loop_control:
+      loop_var: _iter_secret_stores
+      label: "{{ _iter_secret_stores.name }}"
+
