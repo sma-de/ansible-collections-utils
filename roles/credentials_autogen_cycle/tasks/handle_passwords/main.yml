@@ -28,9 +28,16 @@
             no_log: >-
               {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
 
-        when: >-
-          not _iter_passwords.value.credential.auto_create.cycle
-          or _iter_passwords.value.reversable
+          ##
+          ## update: even when we dont cycle and dont support reversing,
+          ##   we need check if a password exists already to see if
+          ##   we need to generate an initial one, will anything bad
+          ##   happen if we always try to load old pw or was this
+          ##   just an ill-advised "optimisation"
+          ##
+##        when: >-
+##          not _iter_passwords.value.credential.auto_create.cycle
+##          or _iter_passwords.value.reversable
 
 
       ## optionally auto generate password (either
@@ -40,7 +47,9 @@
           _tmp_new_secret_val: >-
             {{ lookup('ansible.builtin.password', '/dev/null',
                  **_iter_passwords.value.credential.auto_create.config) }}
-        when: _iter_passwords.value.credential.auto_create.cycle
+        when: >-
+          _iter_passwords.value.credential.auto_create.cycle
+          or _tmp_old_secret is falsy
         no_log: >-
           {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
 
