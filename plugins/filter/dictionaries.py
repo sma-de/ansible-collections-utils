@@ -82,7 +82,9 @@ class ConvertHashiVaultCfgFilter(FilterBase):
 
         for k, v in secrets.items():
             ## build secret path by templating with mapping key
-            spath = spath_tmplate.format(secret_key=k)
+            spath = spath_tmplate.format(secret_key=k,
+              custom_vars=(params.get('custom_vars', None) or {})
+            )
 
             if mode == 'write':
                 tmp = {'data': v}
@@ -217,23 +219,6 @@ class FilterUndoSecretsFilter(FilterBase):
                 )
 
         return indict
-
-
-
-# ---- Ansible filters ----
-class FilterModule(object):
-    ''' generic dictionary filters '''
-
-    def filters(self):
-        res = {}
-
-        tmp = [
-          ConvertHashiVaultCfgFilter,
-          FilterUndoSecretsFilter,
-        ]
-
-        for f in tmp:
-            res[f.FILTER_ID] = f()
 
 
 
