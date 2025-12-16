@@ -83,7 +83,12 @@ class ConvertHashiVaultCfgFilter(FilterBase):
         for k, v in secrets.items():
             ## build secret path by templating with mapping key
             spath = spath_tmplate.format(secret_key=k,
-              custom_vars=(params.get('custom_vars', None) or {})
+              custom_vars_common=(params.get(
+                'custom_vars_common', None
+              ) or {}),
+              custom_vars_item=((params.get(
+                'custom_vars_item', None
+              ) or {}).get(k, None) or {}),
             )
 
             if mode == 'write':
