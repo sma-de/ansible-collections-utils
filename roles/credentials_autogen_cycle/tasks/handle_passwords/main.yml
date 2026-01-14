@@ -28,16 +28,16 @@
             no_log: >-
               {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
 
-          ##
-          ## update: even when we dont cycle and dont support reversing,
-          ##   we need check if a password exists already to see if
-          ##   we need to generate an initial one, will anything bad
-          ##   happen if we always try to load old pw or was this
-          ##   just an ill-advised "optimisation"
-          ##
-##        when: >-
-##          not _iter_passwords.value.credential.auto_create.cycle
-##          or _iter_passwords.value.reversable
+        ##
+        ## note: we always need to check for an old password when
+        ##   we are NOT auto-cycling or reversable is on but we can safely
+        ##   skip optimize this away when auto-cycling is on and
+        ##   reversable is off because for this case we dont care at all
+        ##   for old passwords
+        ##
+        when: >-
+          not _iter_passwords.value.credential.auto_create.cycle
+          or _iter_passwords.value.reversable
 
 
       ## optionally auto generate password (either
@@ -54,6 +54,11 @@
           {{ smabot_utils_credentials_autogen_cycle_args_normed.hide_secrets }}
 
 
+        ##
+        ## note: this flag will only be correct when we read back
+        ##   the previous password above which is okay as we only
+        ##   use it when reversable is on
+        ##
       - set_fact:
           _tmp_secret_update: >-
             {{ _tmp_old_secret is truthy
